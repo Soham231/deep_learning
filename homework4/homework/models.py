@@ -24,6 +24,23 @@ class MLPPlanner(nn.Module):
         self.n_track = n_track
         self.n_waypoints = n_waypoints
 
+        #Make a sequential model
+        self.model = torch.nn.Sequential(
+            torch.nn.Linear(n_track * 2 * 2, 256),
+            torch.nn.ReLU(),
+            torch.nn.BatchNorm1d(256),
+
+            torch.nn.Linear(256, 128),
+            torch.nn.ReLU(),
+            torch.nn.BatchNorm1d(128),
+
+            torch.nn.Linear(128, 64),
+            torch.nn.ReLU(),
+            torch.nn.BatchNorm1d(64),
+
+            torch.nn.Linear(64, n_waypoints * 2),
+        )
+
     def forward(
         self,
         track_left: torch.Tensor,
@@ -43,7 +60,18 @@ class MLPPlanner(nn.Module):
         Returns:
             torch.Tensor: future waypoints with shape (b, n_waypoints, 2)
         """
-        raise NotImplementedError
+        #Concatenate the left and right track points
+        x = torch.cat([track_left, track_right], dim=2)
+        #Reshape the concatenated points to have the shape (b, n_track * 2 * 2)
+        x = x.view(x.size(0), -1)
+
+        #Pass the concatenated points through the model
+        x = self.model(x)
+
+        #Reshape the output to have the shape (b, n_waypoints, 2)
+        x = x.view(x.size(0), self.n_waypoints, 2)
+
+        return x
 
 
 class TransformerPlanner(nn.Module):
@@ -59,6 +87,16 @@ class TransformerPlanner(nn.Module):
         self.n_waypoints = n_waypoints
 
         self.query_embed = nn.Embedding(n_waypoints, d_model)
+        self.track_embed = nn.Linear(2, d_model)
+
+        self.transformer = nn.TransformerDecoderLayer(
+            d_model=d_model,
+            nhead=4,
+            dim_feedforward=256,
+            dropout=0.1,
+            batch_first=True,
+        )
+        self.output_layer = nn.Linear(d_model, 2)
 
     def forward(
         self,
@@ -79,7 +117,32 @@ class TransformerPlanner(nn.Module):
         Returns:
             torch.Tensor: future waypoints with shape (b, n_waypoints, 2)
         """
-        raise NotImplementedError
+        batch_size = track_left.shape[0]
+        
+        # Combine left and right tracks
+        # Shape: (batch, 2*n_track, 2)
+        track_points = torch.cat([track_left, track_right], dim=1)
+        
+        # Project track points to d_model dimensions
+        # Shape: (batch, 2*n_track, d_model)
+        memory = self.input_proj(track_points)
+        
+        # Get query embeddings and expand for batch
+        # Shape: (batch, n_waypoints, d_model)
+        queries = self.query_embed.weight[None].expand(batch_size, -1, -1)
+        
+        # Apply transformer layer
+        # queries act as decoder input, memory as encoder output
+        output = self.transformer(
+            tgt=queries,  # Target sequence (queries)
+            memory=memory,  # Source sequence (encoded track points)
+        )
+        
+        # Project to 2D coordinates
+        # Shape: (batch, n_waypoints, 2)
+        waypoints = self.output_layer(output)
+        
+        return waypoints
 
 
 class CNNPlanner(torch.nn.Module):
