@@ -81,10 +81,14 @@ def train_MLP(
     global_step = 0
     for epoch in range(num_epoch):
         model.train()
+        train_metrics = PlannerMetric()
+        train_metrics.reset()
+
         for batch in train_data:
             track_left = batch['track_left'].to(device)
             track_right = batch['track_right'].to(device)
             target_waypoints = batch['waypoints'].to(device)
+            waypoints_mask = batch['waypoints_mask'].to(device)
 
             optimizer.zero_grad()
             pred = model(track_left, track_right)
@@ -92,26 +96,46 @@ def train_MLP(
             loss.backward()
             optimizer.step()
 
+            train_metrics.add(pred, target_waypoints, waypoints_mask)
+
             global_step += 1
             if global_step % 10 == 0:
                 logger.add_scalar("train/loss", loss.item(), global_step)
+        
+        train_results = train_metrics.compute()
 
         model.eval()
+        val_metrics = PlannerMetric()
+        val_metrics.reset()
+
         with torch.no_grad():
+            val_loss = 0
+            val_batches = 0
             for batch in val_data:
                 track_left = batch['track_left'].to(device)
                 track_right = batch['track_right'].to(device)
                 target_waypoints = batch['waypoints'].to(device)
+                waypoints_mask = batch['waypoints_mask'].to(device)
 
                 pred = model(track_left, track_right)
                 loss = loss_fn(pred, target_waypoints)
+                val_loss += loss
+                val_batches += 1
+
+                val_metrics.add(pred, target_waypoints, waypoints_mask)
                 logger.add_scalar("val/loss", loss.item(), global_step)
+
+            avg_val_loss = val_loss / val_batches
+            logger.add_scalar("val/loss", avg_val_loss, global_step)
+            scheduler.step(avg_val_loss)
         
+        val_results = val_metrics.compute()
+
         print(f"Epoch [{epoch+1}/{num_epoch}]")
-        print(f"Training Loss: {avg_train_loss:.6f}")
-        print(f"Validation Loss: {avg_val_loss:.6f}")
+        print(f"Train - Lateral: {train_results['lateral_error']:.4f}, Long: {train_results['longitudinal_error']:.4f}")
+        print(f"Val   - Lateral: {val_results['lateral_error']:.4f}, Long: {val_results['longitudinal_error']:.4f}")
         print(f"Learning Rate: {optimizer.param_groups[0]['lr']:.6f}")
-        print("-" * 50)
+        print("-" * 50)     
         
 
     save_model(model)
