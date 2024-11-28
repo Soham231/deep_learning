@@ -140,9 +140,9 @@ def train_MLP(
 
             avg_val_loss = val_loss / val_batches
             logger.add_scalar("val/loss", avg_val_loss, global_step)
-            scheduler.step(val_results['lateral_error'])
         
-        val_results = val_metrics.compute()
+            val_results = val_metrics.compute()
+            scheduler.step(val_results['lateral_error'])
 
         print(f"Epoch [{epoch+1}/{num_epoch}]")
         print(f"Train - Lateral: {train_results['lateral_error']:.4f}, Long: {train_results['longitudinal_error']:.4f}")
