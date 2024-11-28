@@ -15,6 +15,18 @@ from .metrics import PlannerMetric
 from .models import TransformerPlanner, CNNPlanner, MLPPlanner, save_model, load_model
 from .datasets import road_dataset, road_transforms
 
+class WeightedL1Loss(torch.nn.Module):
+    def __init__(self, lateral_weight=3.0):  # Higher weight for lateral error
+        super().__init__()
+        self.base_criterion = nn.L1Loss(reduction='none')
+        self.lateral_weight = lateral_weight
+    
+    def forward(self, pred, target):
+        # Split into components
+        error = self.base_criterion(pred, target)  # Shape: (batch, waypoints, 2)
+        
+        # Weight the lateral component (y-coordinate) more heavily
+        error[..., 1] *= self.lateral_weight
 
 @torch.inference_mode()
 def compute_metrics(model, data, device):
@@ -51,7 +63,7 @@ def train_MLP(
     model = MLPPlanner()
     model = model.to(device)
 
-    loss_fn = torch.nn.L1Loss()
+    loss_fn = WeightedL1Loss()
 
     train_data = road_dataset.load_data(
         "drive_data/train",
@@ -69,15 +81,15 @@ def train_MLP(
         num_workers=2
     )
 
-    optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=1e-5)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=1e-4)
 
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer,
         mode='min',
-        factor=0.2,
-        patience=7,
+        factor=0.15,
+        patience=5,
         verbose=True,
-        min_lr=1e-6 
+        min_lr=1e-7
     )
 
     global_step = 0
