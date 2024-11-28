@@ -8,6 +8,7 @@ import argparse
 import numpy as np
 import torch.utils.tensorboard as tb
 
+
 from pathlib import Path
 from datetime import datetime
 from .metrics import PlannerMetric
@@ -31,9 +32,9 @@ def compute_metrics(model, data, device):
 def train_MLP(
     model_name: str = "mlp_planner",
     exp_dir: str = "logs",
-    num_epoch: int = 50,
-    lr: float = 1e-4,
-    batch_size: int = 32,
+    num_epoch: int = 100, 
+    lr: float = 1e-3,
+    batch_size: int = 64,
     seed: int = 2024,
     **kwargs,
 ):
@@ -68,14 +69,15 @@ def train_MLP(
         num_workers=2
     )
 
-    optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=1e-5)
 
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer,
         mode='min',
-        factor=0.5,
-        patience=5,
-        verbose=True
+        factor=0.2,
+        patience=7,
+        verbose=True,
+        min_lr=1e-6 
     )
 
     global_step = 0
@@ -147,7 +149,7 @@ if __name__ == "__main__":
     parser.add_argument("--exp_dir", type=str, default="logs")
     parser.add_argument("--model_name", type=str, default="mlp_planner") 
     parser.add_argument("--num_epoch", type=int, default=50)
-    parser.add_argument("--lr", type=float, default=1e-3)
+    parser.add_argument("--lr", type=float, default=5e-4)
     parser.add_argument("--seed", type=int, default=2024)
 
     args = parser.parse_args()

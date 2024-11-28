@@ -26,19 +26,21 @@ class MLPPlanner(nn.Module):
 
         #Make a sequential model
         self.model = torch.nn.Sequential(
-            torch.nn.Linear(n_track * 2 * 2, 256),
+            torch.nn.Linear(n_track * 2 * 2, 512),
             torch.nn.ReLU(),
-            torch.nn.BatchNorm1d(256),
+            torch.nn.BatchNorm1d(512),
+            torch.nn.Dropout(0.1),
 
-            torch.nn.Linear(256, 128),
+            torch.nn.Linear(512, 512//2),
             torch.nn.ReLU(),
-            torch.nn.BatchNorm1d(128),
+            torch.nn.BatchNorm1d(512//2),
+            torch.nn.Dropout(0.1),
 
-            torch.nn.Linear(128, 64),
+            torch.nn.Linear(512//2, 512//4),
             torch.nn.ReLU(),
-            torch.nn.BatchNorm1d(64),
+            torch.nn.BatchNorm1d(512//4),
 
-            torch.nn.Linear(64, n_waypoints * 2),
+            torch.nn.Linear(512//4, n_waypoints * 2),
         )
 
     def forward(
