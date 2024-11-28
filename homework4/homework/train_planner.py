@@ -96,7 +96,7 @@ def train_MLP(
                 target_waypoints = batch['waypoints'].to(device)
 
                 pred = model(track_left, track_right)
-                loss = torch.nn.MSELoss(pred, target_waypoints)
+                loss = loss_fn(pred, target_waypoints)
                 logger.add_scalar("val/loss", loss.item(), global_step)
         
 
