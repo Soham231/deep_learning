@@ -85,10 +85,10 @@ def train_MLP(
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer,
         mode='min',
-        factor=0.15,
+        factor=0.5,
         patience=5,
         verbose=True,
-        min_lr=1e-7
+        min_lr=1e-5
     )
 
     global_step = 0
@@ -140,7 +140,7 @@ def train_MLP(
 
             avg_val_loss = val_loss / val_batches
             logger.add_scalar("val/loss", avg_val_loss, global_step)
-            scheduler.step(avg_val_loss)
+            scheduler.step(val_results['lateral_error'])
         
         val_results = val_metrics.compute()
 
@@ -160,7 +160,7 @@ if __name__ == "__main__":
     parser.add_argument("--exp_dir", type=str, default="logs")
     parser.add_argument("--model_name", type=str, default="mlp_planner") 
     parser.add_argument("--num_epoch", type=int, default=50)
-    parser.add_argument("--lr", type=float, default=5e-4)
+    parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--seed", type=int, default=2024)
 
     args = parser.parse_args()
