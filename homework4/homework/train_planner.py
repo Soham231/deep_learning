@@ -51,7 +51,7 @@ def train_MLP(
     model = model.to(device)
 
     train_data = road_dataset.load_data(
-        "road_data/train",
+        "drive_data/train",
         transform_pipeline="aug",
         batch_size=batch_size,
         shuffle=True,
@@ -59,7 +59,7 @@ def train_MLP(
     )
 
     val_data = road_dataset.load_data(
-        "road_data/val",
+        "drive_data/val",
         transform_pipeline="default",
         batch_size=batch_size,
         shuffle=False,
