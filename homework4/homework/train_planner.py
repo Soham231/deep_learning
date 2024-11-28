@@ -50,6 +50,8 @@ def train_MLP(
     model = MLPPlanner()
     model = model.to(device)
 
+    loss_fn = torch.nn.MSELoss()
+
     train_data = road_dataset.load_data(
         "drive_data/train",
         transform_pipeline="state_only",
@@ -78,7 +80,7 @@ def train_MLP(
 
             optimizer.zero_grad()
             pred = model(track_left, track_right)
-            loss = torch.nn.MSELoss(pred, target_waypoints)
+            loss = loss_fn(pred, target_waypoints)
             loss.backward()
             optimizer.step()
 
