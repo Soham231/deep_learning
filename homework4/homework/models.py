@@ -23,24 +23,31 @@ class MLPPlanner(nn.Module):
 
         self.n_track = n_track
         self.n_waypoints = n_waypoints
+        input_size = n_track * 2 * 2
 
         #Make a sequential model
-        self.model = torch.nn.Sequential(
-            torch.nn.Linear(n_track * 2 * 2, 512),
-            torch.nn.ReLU(),
-            torch.nn.BatchNorm1d(512),
-            torch.nn.Dropout(0.1),
-
-            torch.nn.Linear(512, 512//2),
-            torch.nn.ReLU(),
-            torch.nn.BatchNorm1d(512//2),
-            torch.nn.Dropout(0.1),
-
-            torch.nn.Linear(512//2, 512//4),
-            torch.nn.ReLU(),
-            torch.nn.BatchNorm1d(512//4),
-
-            torch.nn.Linear(512//4, n_waypoints * 2),
+        self.shared = nn.Sequential(
+            nn.Linear(input_size, 256),
+            nn.BatchNorm1d(256),
+            nn.ReLU(),
+            nn.Linear(256, 128),
+            nn.BatchNorm1d(128),
+            nn.ReLU(),
+        )
+        
+        # Separate paths for lateral and longitudinal
+        self.lateral = nn.Sequential(
+            nn.Linear(128, 64),
+            nn.BatchNorm1d(64),
+            nn.ReLU(),
+            nn.Linear(64, n_waypoints)
+        )
+        
+        self.longitudinal = nn.Sequential(
+            nn.Linear(128, 64),
+            nn.BatchNorm1d(64),
+            nn.ReLU(),
+            nn.Linear(64, n_waypoints)
         )
 
     def forward(
@@ -62,18 +69,21 @@ class MLPPlanner(nn.Module):
         Returns:
             torch.Tensor: future waypoints with shape (b, n_waypoints, 2)
         """
-        #Concatenate the left and right track points
-        x = torch.cat([track_left, track_right], dim=2)
-        #Reshape the concatenated points to have the shape (b, n_track * 2 * 2)
-        x = x.view(x.size(0), -1)
-
-        #Pass the concatenated points through the model
-        x = self.model(x)
-
-        #Reshape the output to have the shape (b, n_waypoints, 2)
-        x = x.view(x.size(0), self.n_waypoints, 2)
-
-        return x
+        batch_size = track_left.shape[0]
+        x = torch.cat([
+            track_left.reshape(batch_size, -1),
+            track_right.reshape(batch_size, -1)
+        ], dim=1)
+        
+        # Shared features
+        shared_features = self.shared(x)
+        
+        # Separate predictions
+        lat = self.lateral(shared_features)
+        long = self.longitudinal(shared_features)
+        
+        # Combine predictions
+        return torch.stack([long, lat], dim=-1)
 
 
 class TransformerPlanner(nn.Module):

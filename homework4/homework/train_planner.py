@@ -80,17 +80,12 @@ def train_MLP(
         num_workers=2
     )
 
-    optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=1e-4)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=5e-4, weight_decay=1e-4)
 
-    scheduler = torch.optim.lr_scheduler.OneCycleLR(
+    scheduler = torch.optim.lr_scheduler.StepLR(
         optimizer,
-        epochs=num_epoch,
-        steps_per_epoch=len(train_data),
-        div_factor=10,
-        verbose=True,
-        max_lr=1e-3,
-        final_div_factor=10,
-        pct_start=0.3
+        step_size=10,
+        gamma=0.5
     )
 
     global_step = 0
@@ -110,7 +105,6 @@ def train_MLP(
             loss = loss_fn(pred, target_waypoints)
             loss.backward()
             optimizer.step()
-            scheduler.step()
 
             train_metrics.add(pred, target_waypoints, waypoints_mask)
 
@@ -144,7 +138,8 @@ def train_MLP(
             avg_val_loss = val_loss / val_batches
             logger.add_scalar("val/loss", avg_val_loss, global_step)
         
-            val_results = val_metrics.compute()
+        scheduler.step()
+        val_results = val_metrics.compute()
 
         print(f"Epoch [{epoch+1}/{num_epoch}]")
         print(f"Train - Lateral: {train_results['lateral_error']:.4f}, Long: {train_results['longitudinal_error']:.4f}")
