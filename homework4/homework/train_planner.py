@@ -50,7 +50,7 @@ def train_MLP(
     model = MLPPlanner()
     model = model.to(device)
 
-    loss_fn = torch.nn.MSELoss()
+    loss_fn = torch.nn.L1Loss()
 
     train_data = road_dataset.load_data(
         "drive_data/train",
@@ -69,6 +69,14 @@ def train_MLP(
     )
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
+
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer,
+        mode='min',
+        factor=0.5,
+        patience=5,
+        verbose=True
+    )
 
     global_step = 0
     for epoch in range(num_epoch):
@@ -98,6 +106,12 @@ def train_MLP(
                 pred = model(track_left, track_right)
                 loss = loss_fn(pred, target_waypoints)
                 logger.add_scalar("val/loss", loss.item(), global_step)
+        
+        print(f"Epoch [{epoch+1}/{num_epoch}]")
+        print(f"Training Loss: {avg_train_loss:.6f}")
+        print(f"Validation Loss: {avg_val_loss:.6f}")
+        print(f"Learning Rate: {optimizer.param_groups[0]['lr']:.6f}")
+        print("-" * 50)
         
 
     save_model(model)
