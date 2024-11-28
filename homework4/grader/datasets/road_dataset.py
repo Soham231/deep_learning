@@ -54,15 +54,15 @@ class RoadDataset(Dataset):
             #Edit below here
             xform = road_transforms.Compose(
                 [
-                    road_transforms.ImageLoader(self.episode_path),
+                    # road_transforms.ImageLoader(self.episode_path),
                     road_transforms.EgoTrackProcessor(self.track),
-                    road_transforms.RandomHorizontalFlip(),
-                    torchvision.transforms.RandomGrayscale(p=0.2),
-                    torchvision.transforms.ToTensor(),
-                    torchvision.transforms.Normalize(mean=[0.5], std=[0.5]),
+                    # road_transforms.RandomHorizontalFlip(),
+                    # torchvision.transforms.RandomGrayscale(p=0.2),
+                    # torchvision.transforms.ToTensor(),
+                    # torchvision.transforms.RandomHorizontalFlip(),
+                    # torchvision.transforms.Normalize(mean=[0.5], std=[0.5]),
                 ]
             )
-
         if xform is None:
             raise ValueError(f"Invalid transform {transform_pipeline} specified!")
 

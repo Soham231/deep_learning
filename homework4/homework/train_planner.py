@@ -52,7 +52,7 @@ def train_MLP(
 
     train_data = road_dataset.load_data(
         "drive_data/train",
-        transform_pipeline="aug",
+        transform_pipeline="state_only",
         batch_size=batch_size,
         shuffle=True,
         num_workers=2
@@ -60,13 +60,13 @@ def train_MLP(
 
     val_data = road_dataset.load_data(
         "drive_data/val",
-        transform_pipeline="default",
+        transform_pipeline="state_only",
         batch_size=batch_size,
         shuffle=False,
         num_workers=2
     )
 
-    optimizer = torch.optim.adamw(model.parameters(), lr=lr)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
 
     global_step = 0
     for epoch in range(num_epoch):
@@ -76,7 +76,7 @@ def train_MLP(
             track_right = batch['track_right'].to(device)
             target_waypoints = batch['waypoints'].to(device)
 
-            optimizer.zero()
+            optimizer.zero_grad()
             pred = model(track_left, track_right)
             loss = torch.nn.MSELoss(pred, target_waypoints)
             loss.backward()
