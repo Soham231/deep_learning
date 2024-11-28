@@ -18,7 +18,7 @@ from .datasets import road_dataset, road_transforms
 class WeightedL1Loss(torch.nn.Module):
     def __init__(self, lateral_weight=3.0):  # Higher weight for lateral error
         super().__init__()
-        self.base_criterion = nn.L1Loss(reduction='none')
+        self.base_criterion = torch.nn.L1Loss(reduction='none')
         self.lateral_weight = lateral_weight
     
     def forward(self, pred, target):
