@@ -72,12 +72,13 @@ def train_MLP(
     for epoch in range(num_epoch):
         model.train()
         for batch in train_data:
-            img = batch['image'].to(device)
-            target = batch['target'].to(device)
+            track_left = batch['track_left'].to(device)
+            track_right = batch['track_right'].to(device)
+            target_waypoints = batch['waypoints'].to(device)
 
             optimizer.zero()
-            pred = model(img)
-            loss = torch.nn.MSELoss(pred, target)
+            pred = model(track_left, track_right)
+            loss = torch.nn.MSELoss(pred, target_waypoints)
             loss.backward()
             optimizer.step()
 
@@ -85,9 +86,17 @@ def train_MLP(
             if global_step % 10 == 0:
                 logger.add_scalar("train/loss", loss.item(), global_step)
 
-        val_metrics = compute_metrics(model, val_data, device)
-        for k, v in val_metrics.items():
-            logger.add_scalar(f"val/{k}", v, global_step)
+        model.eval()
+        with torch.no_grad():
+            for batch in val_data:
+                track_left = batch['track_left'].to(device)
+                track_right = batch['track_right'].to(device)
+                target_waypoints = batch['waypoints'].to(device)
+
+                pred = model(track_left, track_right)
+                loss = torch.nn.MSELoss(pred, target_waypoints)
+                logger.add_scalar("val/loss", loss.item(), global_step)
+        
 
     save_model(model)
     torch.save(model.state_dict(), log_dir / "mlp.th")

@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import numpy as np
+import torchvision
 from torch.utils.data import ConcatDataset, DataLoader, Dataset
 
 from . import road_transforms
@@ -49,8 +50,18 @@ class RoadDataset(Dataset):
             # track_left, track_right, waypoints, waypoints_mask
             xform = road_transforms.EgoTrackProcessor(self.track)
         elif transform_pipeline == "aug":
-            # add your custom augmentations here
-            pass
+            # image, track_left, track_right, waypoints, waypoints_mask
+            #Edit below here
+            xform = road_transforms.Compose(
+                [
+                    road_transforms.ImageLoader(self.episode_path),
+                    road_transforms.EgoTrackProcessor(self.track),
+                    road_transforms.RandomHorizontalFlip(),
+                    torchvision.transforms.RandomGrayscale(p=0.2),
+                    torchvision.transforms.ToTensor(),
+                    torchvision.transforms.Normalize(mean=[0.5], std=[0.5]),
+                ]
+            )
 
         if xform is None:
             raise ValueError(f"Invalid transform {transform_pipeline} specified!")
