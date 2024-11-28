@@ -82,10 +82,13 @@ def train_MLP(
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=5e-4, weight_decay=1e-4)
 
-    scheduler = torch.optim.lr_scheduler.StepLR(
+    scheduler = torch.optim.lr_scheduler.CyclicLR(
         optimizer,
-        step_size=10,
-        gamma=0.5
+        base_lr=1e-4,
+        max_lr=5e-4,
+        step_size_up=len(train_data)*5,  # 5 epochs up
+        mode='triangular2',  # Learning rate will decrease over time
+        cycle_momentum=False
     )
 
     global_step = 0
@@ -104,7 +107,9 @@ def train_MLP(
             pred = model(track_left, track_right)
             loss = loss_fn(pred, target_waypoints)
             loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             optimizer.step()
+            scheduler.step()
 
             train_metrics.add(pred, target_waypoints, waypoints_mask)
 
@@ -138,7 +143,6 @@ def train_MLP(
             avg_val_loss = val_loss / val_batches
             logger.add_scalar("val/loss", avg_val_loss, global_step)
         
-        scheduler.step()
         val_results = val_metrics.compute()
 
         print(f"Epoch [{epoch+1}/{num_epoch}]")
