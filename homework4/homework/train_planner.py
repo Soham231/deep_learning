@@ -54,6 +54,10 @@ def train_MLP(
     torch.cuda.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
     np.random.seed(seed)
+    best_lateral = float('inf')
+    best_state = None
+    patience = 0
+    max_patience = 10
 
     log_dir = Path(exp_dir) / f"{model_name}_{datetime.now().strftime('%m%d_%H%M%S')}"
     log_dir.mkdir(parents=True, exist_ok=True)
@@ -144,6 +148,19 @@ def train_MLP(
             logger.add_scalar("val/loss", avg_val_loss, global_step)
         
         val_results = val_metrics.compute()
+        current_lateral = val_results['lateral_error']
+        
+        if current_lateral < best_lateral:
+            best_lateral = current_lateral
+            best_state = {k: v.cpu() for k, v in model.state_dict().items()}
+            patience = 0
+        else:
+            patience += 1
+            
+        if patience >= max_patience:
+            print(f"Early stopping at epoch {epoch+1}. Best lateral error: {best_lateral:.4f}")
+            model.load_state_dict(best_state)
+            break
 
         print(f"Epoch [{epoch+1}/{num_epoch}]")
         print(f"Train - Lateral: {train_results['lateral_error']:.4f}, Long: {train_results['longitudinal_error']:.4f}")
