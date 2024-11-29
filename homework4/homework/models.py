@@ -99,7 +99,7 @@ class TransformerPlanner(nn.Module):
         self.n_waypoints = n_waypoints
 
         self.query_embed = nn.Embedding(n_waypoints, d_model)
-        self.track_embed = nn.Linear(2, d_model)
+        self.input_proj = nn.Linear(2, d_model)
 
         self.transformer = nn.TransformerDecoderLayer(
             d_model=d_model,
