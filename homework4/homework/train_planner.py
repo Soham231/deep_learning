@@ -454,7 +454,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--exp_dir", type=str, default="logs")
-    parser.add_argument("--model_name", type=str, default="transformer_planner") 
+    parser.add_argument("--model_name", type=str, default="cnn_planner") 
     parser.add_argument("--num_epoch", type=int, default=50)
     parser.add_argument("--lr", type=float, default=1e-4)
     parser.add_argument("--seed", type=int, default=2024)
